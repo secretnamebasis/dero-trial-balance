@@ -1,0 +1,78 @@
+#!/bin/bash
+#
+# data feeds
+
+export_balance=$(curl -s -X POST \
+  http://127.0.0.1:10103/json_rpc \
+  -H 'content-type: application/json' \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": "1",
+    "method": "GetBalance"
+}')
+
+export_transfers=$(curl -s -X POST \
+  http://127.0.0.1:10103/json_rpc \
+  -H 'content-type: application/json' \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": "1",
+    "method": "GetTransfers",
+    "params": {
+        "coinbase": true,
+        "out": true,
+        "in": true
+    }
+}')
+
+# Initialize Wallet Balance
+wallet_balance=$(echo "$export_balance" | jq '.result | (.balance)')
+
+# Initialize General Ledger
+general_ledger=$(echo "$export_transfers" | jq '.')
+
+# Initialize Journal Entries
+journal_entries=$(echo "$general_ledger" | jq '.result.entries[]')
+
+# Initialize Transaction Detail Params
+transaction_details=$(echo "$journal_entries" | jq '{txid, scid, time, incoming, amount, destination, sender, payload_rpc, dstport}')
+
+# Initialize Inflows
+coinbase_transactions=$(echo "$journal_entries" | jq 'select(.coinbase != false)')
+incoming_transactions=$(echo "$journal_entries" | jq 'select(.incoming == true and .coinbase != true)')
+miner_rewards=$(echo "$journal_entries" | jq 'select(.minerreward > 0)')
+
+# Initialize Outflows
+outgoing_transactions=$(echo "$journal_entries" | jq 'select(.incoming != true and .coinbase != true and .amount > 0)')
+fees=$(echo "$journal_entries" | jq 'select(.incoming != true and .coinbase !=true and .fees > 0)')
+
+# Calculation Parameters
+inflows=$(echo "$incoming_transactions" | jq '(.amount)')
+coinbase=$(echo "$coinbase_transactions" | jq '(.amount)')
+outflows=$(echo "$outgoing_transactions" | jq 'select(.amount > 0) |(.amount)')
+gasflows=$(echo "$fees" | jq '(.fees)')
+
+
+# calculations
+
+ total_inflows=$(echo "$inflows" | awk '{sum+=$1} END {print sum}')
+ total_coinbase=$(echo "$coinbase" | awk '{sum+=$1} END {print sum}')
+wallet_inflows=$(calc $total_inflows + $total_coinbase)
+ echo "Inflows:         $total_inflows"
+ echo "Coinbase:        $total_coinbase"
+ echo "Income: $wallet_inflows"
+ echo ""
+ total_outflows=$(echo "$outflows" | awk '{sum+=$1} END {print sum}')
+ total_fees=$(echo "$gasflows" | awk '{sum+=$1} END {print sum}')
+wallet_outflows=$(calc $total_outflows + $total_fees)
+ echo "Outflows:        $total_outflows"
+ echo "Fees:            $total_fees"
+ echo "Expenses $wallet_outflows"
+ echo ""
+wallet_flows=$(calc $wallet_inflows - $wallet_outflows)
+ echo "Subtotal: $wallet_flows"
+ echo ""
+ echo "Balance:         $wallet_balance"
+ echo ""
+wallet_diff=$(calc $wallet_balance - $wallet_flows)
+ echo "Diff:    $wallet_diff"
