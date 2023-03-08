@@ -6,7 +6,7 @@ You can conduct a trial balance on your wallet's funds.
 
 To download the program, first:
 ```
-curl https://raw.githubusercontent.com/secretnamebasis/dero-trial-balance/main/scan
+wget https://raw.githubusercontent.com/secretnamebasis/dero-trial-balance/main/scan
 ```
 Then mark the file as executable
 ```
