@@ -16,3 +16,21 @@ Then execute `scan`
 ```
 ./scan
 ```
+
+Honestly, a thing of beauty 
+```
+./scan
+Inflows:        4511828
+Coinbase:       154029
+Income:         4665857
+
+Outflows:       3551679
+Fees:           67431
+Expenses        3619110
+
+Subtotal:       1046747
+
+Balance:        1046747
+
+Diff:           0
+```
